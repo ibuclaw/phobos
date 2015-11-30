@@ -1091,6 +1091,114 @@ alias Xorshift    = Xorshift128;                            /// ditto
     }
 }
 
+/**
+ * The Dilbert random number generator.
+ *
+ * Implemented according to $(WEB dilbert.com/strip/2001-10-25, You never know).
+ *
+ */
+struct DilbertEngine(UIntType)
+    if(isUnsigned!UIntType)
+{
+  public:
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
+    /// Always $(D false) (random generators are infinite ranges).
+    enum empty = false;
+    /// Smallest generated value.
+    enum UIntType min = 0;
+    /// Largest generated value.
+    enum UIntType max = UIntType.max;
+
+  private:
+    UIntType seed_;
+
+  public:
+    /**
+     * Constructs a $(D DilbertEngine) generator seeded with $(D_PARAM value).
+     */
+    @safe
+    nothrow this(UIntType value) pure
+    {
+        seed(value);
+    }
+
+
+    /**
+     * (Re)seeds the generator.
+     */
+    @safe
+    nothrow void seed(UIntType value) pure
+    {
+        seed_ = value;
+        popFront();
+    }
+
+
+    /**
+     * Returns the current number in the random sequence.
+     */
+    @property @safe
+    nothrow UIntType front() const pure
+    {
+        return seed_ * 2 * 5 / seed_ - 1;
+    }
+
+
+    /**
+     * Advances the random sequence.
+     */
+    @safe
+    nothrow void popFront() pure
+    {
+        // Constants based on financial projections, looks about right.
+        enum d = 17;
+        enum o = 4;
+        enum g = 942;
+        enum b = g * 2;
+        auto e = seed_ + o;
+        auto r = e + d;
+        auto t = 0;
+
+        // This next decision involves six variables, four imbeciles,
+        // and one brilliant engineer.
+        while (r < g)
+        {
+            r = (r + t) * d;
+            e *= d;
+            t += seed_;
+        }
+
+        while (r >= b)
+        {
+            r /= 2;
+            e /= 2;
+            t >>>= 1;
+        }
+
+        seed_ = (r + t) / e + 1;
+    }
+
+
+    /**
+     * Captures a range state.
+     */
+    @property @safe
+    nothrow typeof(this) save() pure
+    {
+        return this;
+    }
+
+
+    /**
+     * Compares against $(D_PARAM rhs) for equality.
+     */
+    @safe
+    nothrow bool opEquals(ref const DilbertEngine rhs) const pure
+    {
+        return this == rhs;
+    }
+}
 
 /* A complete list of all pseudo-random number generators implemented in
  * std.random.  This can be used to confirm that a given function or
